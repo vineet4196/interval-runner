@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#101827">
+    <meta name="description" content="Interval running timer with long alerts, rep counter and local training history.">
+    <link rel="manifest" href="manifest.json">
+    <title>Interval Runner</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101827;
+        --card: #1f2937;
+        --card2: #263449;
+        --green: #22c55e;
+        --orange: #fb923c;
+        --muted: #b8c5d6;
+        --line: #37465a;
+        --red: #f87171
+      }
+
+      * {
+        box-sizing: border-box
+      }
+
+      body {
+        margin: 0;
+        background: radial-gradient(ellipse at top, #1c2d42 0, var(--bg) 58%);
+        color: #f8fafc;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
+        max-width: 620px;
+        margin-inline: auto
+      }
+
+      header {
+        text-align: center;
+        margin: 4px 0 20px
+      }
+
+      h1 {
+        font-size: 25px;
+        letter-spacing: 1.4px;
+        margin: 6px 0 3px
+      }
+
+      .sub {
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 2.4px;
+        margin: 0
+      }
+
+      .card {
+        background: rgba(31, 41, 55, .96);
+        border: 1px solid #ffffff0b;
+        border-radius: 22px;
+        padding: 21px 16px;
+        margin-bottom: 15px;
+        box-shadow: 0 8px 26px #00000012
+      }
+
+      .center {
+        text-align: center
+      }
+
+      .phase {
+        font-size: 18px;
+        font-weight: 850;
+        color: var(--green);
+        letter-spacing: 1px
+      }
+
+      .timer {
+        font-size: clamp(64px, 19vw, 86px);
+        font-weight: 850;
+        line-height: 1.28;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -2px
+      }
+
+      .hint {
+        font-size: 14px;
+        color: var(--muted);
+        min-height: 21px
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px
+      }
+
+      .statbox {
+        background: var(--card2);
+        padding: 13px 8px;
+        border-radius: 15px
+      }
+
+      .statlabel {
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 800;
+        letter-spacing: .7px
+      }
+
+      .stat {
+        font-size: 32px;
+        font-weight: 850;
+        margin-top: 3px;
+        font-variant-numeric: tabular-nums
+      }
+
+      .settings {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 9px;
+        margin: 10px 0 15px
+      }
+
+      .settings label {
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.35
+      }
+
+      input {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        margin-top: 7px;
+        padding: 12px 3px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: #111c2b;
+        color: white;
+        text-align: center;
+        font-size: 17px;
+        font-weight: 700
+      }
+
+      button {
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        padding: 15px;
+        font-weight: 850;
+        font-size: 15px;
+        margin: 0 0 10px;
+        color: #07130b;
+        background: var(--green);
+        cursor: pointer
+      }
+
+      button.secondary {
+        background: #475569;
+        color: white
+      }
+
+      button.tertiary {
+        background: #334155;
+        color: #f8fafc
+      }
+
+      button.danger {
+        background: #4b2630;
+        color: #fecaca
+      }
+
+      .section-title {
+        font-size: 15px;
+        font-weight: 850;
+        letter-spacing: .4px;
+        margin: 0 0 5px
+      }
+
+      .section-sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin: 0 0 15px;
+        line-height: 1.5
+      }
+
+      .history-top {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 12px 0 16px
+      }
+
+      .mini {
+        background: #111c2b;
+        border-radius: 13px;
+        padding: 12px 6px;
+        text-align: center
+      }
+
+      .mini strong {
+        display: block;
+        font-size: 22px
+      }
+
+      .mini span {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        margin-top: 3px
+      }
+
+      .chart {
+        display: flex;
+        align-items: flex-end;
+        gap: 7px;
+        height: 112px;
+        padding: 10px 3px 0;
+        border-bottom: 1px solid var(--line);
+        overflow: hidden
+      }
+
+      .barwrap {
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 5px
+      }
+
+      .bar {
+        width: min(100%, 28px);
+        min-height: 3px;
+        background: linear-gradient(180deg, #4ade80, #16a34a);
+        border-radius: 6px 6px 2px 2px
+      }
+
+      .barvalue {
+        font-size: 10px;
+        color: #dce8f5;
+        font-weight: 800
+      }
+
+      .barlabel {
+        font-size: 9px;
+        color: var(--muted);
+        padding-top: 6px
+      }
+
+      .chart-label {
+        font-size: 10px;
+        color: var(--muted);
+        margin: 8px 0 16px
+      }
+
+      .history-list {
+        display: grid;
+        gap: 8px
+      }
+
+      .history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        background: #111c2b;
+        border-radius: 13px;
+        padding: 12px
+      }
+
+      .history-date {
+        font-size: 13px;
+        font-weight: 800
+      }
+
+      .history-detail {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 4px
+      }
+
+      .history-reps {
+        font-size: 20px;
+        font-weight: 850;
+        text-align: right
+      }
+
+      .empty {
+        padding: 18px 10px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+        border: 1px dashed var(--line);
+        border-radius: 13px
+      }
+
+      .note {
+        font-size: 11px;
+        color: var(--muted);
+        text-align: center;
+        line-height: 1.6;
+        margin: 12px 4px
+      }
+
+      .button-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px
+      }
+
+      .button-row button {
+        margin-bottom: 0
+      }
+
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 10px;
+        font-weight: 800;
+        margin-left: 5px;
+        background: #17452d;
+        color: #86efac
+      }
+
+      .pill.partial {
+        background: #49351f;
+        color: #fed7aa
+      }
+
+      @media(max-width:479px) {
+        .settings {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px
+        }
+
+        .settings label {
+          display: block;
+          min-width: 0
+        }
+
+        .settings label:last-child {
+          grid-column: 1/-1
+        }
+
+        .settings label:last-child input {
+          max-width: 100%
+        }
+
+        .button-row {
+          gap: 8px
+        }
+
+        .button-row button {
+          padding: 14px 8px;
+          font-size: 14px
+        }
+      }
+
+      @media(min-width:480px) {
+        body {
+          padding-top: 26px
+        }
+
+        .card {
+          padding: 24px
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>INTERVAL RUNNER</h1>
+      <p class="sub">FAST • RECOVER • REPEAT</p>
+    </header>
+    <section class="card center" aria-live="polite">
+      <div id="phase" class="phase">FAST RUN</div>
+      <div id="timer" class="timer">00:30</div>
+      <div id="hint" class="hint">Run fast, but stay in control</div>
+    </section>
+    <section class="card stats">
+      <div class="statbox center">
+        <div class="statlabel">COMPLETED REPS</div>
+        <div id="reps" class="stat">0</div>
+      </div>
+      <div class="statbox center">
+        <div class="statlabel">SESSION STATUS</div>
+        <div id="status" class="stat" style="font-size:19px">Ready</div>
+      </div>
+    </section>
+    <div class="statlabel">INTERVAL SETTINGS (SECONDS)</div>
+    <div class="settings"><label>Fast run<input id="fast" type="number" min="1" max="3600" value="30" inputmode="numeric"></label><label>Slow / recovery<input id="slow" type="number" min="1" max="3600" value="90" inputmode="numeric"></label><label>Target reps (0 = no limit)<input id="target" type="number" min="0" max="999" value="0" inputmode="numeric"></label></div><button id="start">START RUN</button>
+    <div class="button-row"><button id="reset" class="secondary">RESET SESSION</button><button id="testAlarm" class="tertiary">TEST ALARM</button></div>
+    <section class="card" style="margin-top:18px">
+      <h2 class="section-title">TRAINING HISTORY</h2>
+      <p class="section-sub">Saved on this device in your browser. History remains after closing the page and reopening it, until you clear it or erase browser site data.</p>
+      <div class="history-top">
+        <div class="mini"><strong id="sessionsTotal">0</strong><span>SESSIONS</span></div>
+        <div class="mini"><strong id="repsTotal">0</strong><span>TOTAL REPS</span></div>
+        <div class="mini"><strong id="bestReps">0</strong><span>BEST SESSION</span></div>
+      </div>
+      <h3 class="section-title" style="font-size:12px">RECENT SESSION TREND</h3>
+      <div id="chart" class="chart" aria-label="Recent session reps chart"></div>
+      <div class="chart-label">Reps per session · last 10 saved sessions</div>
+      <div id="historyList" class="history-list"></div><button id="clearHistory" class="danger" style="margin-top:12px">CLEAR ALL HISTORY</button>
+    </section>
+    <p class="note">One rep = one complete fast + slow cycle. The interval alarm is a longer multi-tone alert with vibration when supported. For best results, keep this page open and allow sound. Screen-wake support depends on your browser/device.</p>
+    <script>
+      'use strict';
+      const $ = id => document.getElementById(id);
+      const HISTORY_KEY = 'intervalRunnerHistoryV2';
+      let fastS = 30,
+        slowS = 90,
+        target = 0,
+        remaining = 30000,
+        isFast = true,
+        reps = 0,
+        running = false,
+        done = false,
+        last = 0,
+        raf = 0,
+        wake = null,
+        sessionStartedAt = null,
+        elapsedBeforeStart = 0,
+        sessionSaved = false,
+        audioCtx = null;
+
+      function fmt(ms) {
+        let s = Math.max(0, Math.ceil(ms / 1000));
+        return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0')
+      }
+
+      function safeInt(id, min, max, fallback) {
+        const n = Number.parseInt($(id).value, 10);
+        return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback
+      }
+
+      function elapsedMs() {
+        return elapsedBeforeStart
+      }
+
+      function render() {
+        $('phase').textContent = done ? 'SESSION COMPLETE' : isFast ? 'FAST RUN' : 'SLOW / RECOVERY';
+        $('phase').style.color = isFast ? 'var(--green)' : 'var(--orange)';
+        $('timer').textContent = done ? 'DONE' : fmt(remaining);
+        $('hint').textContent = done ? `Great work — you completed ${reps} reps.` : isFast ? 'Run fast, but stay in control' : 'Slow jog or walk; recover your breathing';
+        $('reps').textContent = reps;
+        $('status').textContent = done ? 'Complete' : running ? 'Running' : (reps || elapsedBeforeStart) ? 'Paused' : 'Ready';
+        $('start').textContent = running ? 'PAUSE' : done ? 'START AGAIN' : (reps || elapsedBeforeStart) ? 'RESUME' : 'START RUN';
+      }
+
+      function getAudio() {
+        const C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return null;
+        if (!audioCtx) audioCtx = new C();
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+        return audioCtx
+      }
+
+      function alarm(kind = 'change') {
+        try {
+          const ctx = getAudio();
+          if (ctx) {
+            const notes = kind === 'finish' ? [880, 1175, 1568, 1175, 1568] : kind === 'fast' ? [880, 1175, 1568] : [660, 880, 1046];
+            const gap = kind === 'finish' ? .30 : .28;
+            notes.forEach((freq, i) => {
+              const start = ctx.currentTime + i * gap;
+              const osc = ctx.createOscillator(),
+                gain = ctx.createGain();
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(freq, start);
+              gain.gain.setValueAtTime(.0001, start);
+              gain.gain.exponentialRampToValueAtTime(.22, start + .025);
+              gain.gain.setValueAtTime(.22, start + .16);
+              gain.gain.exponentialRampToValueAtTime(.0001, start + .24);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(start);
+              osc.stop(start + .26)
+            })
+          }
+        } catch (e) {}
+        try {
+          if (navigator.vibrate) navigator.vibrate(kind === 'finish' ? [300, 120, 300, 120, 500] : [250, 100, 250, 100, 250])
+        } catch (e) {}
+      }
+      async function keepAwake() {
+        try {
+          if ('wakeLock' in navigator && !wake) wake = await navigator.wakeLock.request('screen')
+        } catch (e) {}
+      }
+
+      function releaseWake() {
+        if (wake) {
+          wake.release().catch(() => {});
+          wake = null
+        }
+      }
+
+      function readSettings() {
+        fastS = safeInt('fast', 1, 3600, 30);
+        slowS = safeInt('slow', 1, 3600, 90);
+        target = safeInt('target', 0, 999, 0)
+      }
+
+      function start() {
+        if (done) reset(false);
+        if (!sessionStartedAt) sessionStartedAt = new Date().toISOString();
+        if (!reps && elapsedBeforeStart === 0 && remaining === fastS * 1000) {
+          readSettings();
+          remaining = fastS * 1000
+        }
+        getAudio();
+        running = true;
+        last = performance.now();
+        keepAwake();
+        render();
+        tick()
+      }
+
+      function tick() {
+        cancelAnimationFrame(raf);
+        if (!running) return;
+        const now = performance.now();
+        const delta = Math.max(0, now - last);
+        remaining -= delta;
+        elapsedBeforeStart += delta;
+        last = now;
+        if (remaining <= 0) {
+          if (isFast) {
+            isFast = false;
+            remaining = slowS * 1000;
+            alarm('slow')
+          } else {
+            reps++;
+            if (target && reps >= target) {
+              remaining = 0;
+              running = false;
+              done = true;
+              alarm('finish');
+              releaseWake();
+              saveSession(true);
+              render();
+              return
+            }
+            isFast = true;
+            remaining = fastS * 1000;
+            alarm('fast')
+          }
+        }
+        render();
+        raf = requestAnimationFrame(tick)
+      }
+
+      function pause() {
+        if (!running) return;
+        elapsedBeforeStart += Math.max(0, performance.now() - last);
+        running = false;
+        cancelAnimationFrame(raf);
+        releaseWake();
+        render()
+      }
+
+      function readHistory() {
+        try {
+          const x = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+          return Array.isArray(x) ? x : []
+        } catch (e) {
+          return []
+        }
+      }
+
+      function writeHistory(items) {
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+          return true
+        } catch (e) {
+          alert('Browser storage is unavailable or full. History could not be saved.');
+          return false
+        }
+      }
+
+      function saveSession(completed) {
+        if (sessionSaved || (!reps && !completed && elapsedMs() < 1000)) return;
+        const duration = Math.round(elapsedMs() / 1000);
+        if (duration < 1) return;
+        const record = {
+          id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random()),
+          date: new Date().toISOString(),
+          startedAt: sessionStartedAt || new Date().toISOString(),
+          reps,
+          fastSeconds: fastS,
+          slowSeconds: slowS,
+          target,
+          elapsedSeconds: duration,
+          completed: !!completed
+        };
+        const items = readHistory();
+        items.push(record);
+        if (writeHistory(items)) {
+          sessionSaved = true;
+          renderHistory()
+        }
+      }
+
+      function reset(savePartial = true) {
+        if (running) {
+          elapsedBeforeStart += Math.max(0, performance.now() - last);
+          running = false;
+          cancelAnimationFrame(raf)
+        }
+        releaseWake();
+        if (savePartial && (reps > 0 || elapsedBeforeStart >= 60000) && !sessionSaved) saveSession(false);
+        readSettings();
+        remaining = fastS * 1000;
+        isFast = true;
+        reps = 0;
+        done = false;
+        sessionStartedAt = null;
+        elapsedBeforeStart = 0;
+        sessionSaved = false;
+        render()
+      }
+
+      function humanDate(iso) {
+        const d = new Date(iso);
+        return d.toLocaleDateString(undefined, {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        }) + ' · ' + d.toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }
+
+      function durationLabel(sec) {
+        const m = Math.floor(sec / 60),
+          s = sec % 60;
+        return m ? `${m}m ${s}s` : `${s}s`
+      }
+
+      function renderHistory() {
+        const items = readHistory().sort((a, b) => new Date(a.date) - new Date(b.date));
+        $('sessionsTotal').textContent = items.length;
+        $('repsTotal').textContent = items.reduce((sum, x) => sum + (Number(x.reps) || 0), 0);
+        $('bestReps').textContent = items.reduce((best, x) => Math.max(best, Number(x.reps) || 0), 0);
+        const recent = items.slice(-10);
+        const chart = $('chart');
+        chart.innerHTML = '';
+        if (!recent.length) {
+          chart.innerHTML = '<div class="empty" style="width:100%;align-self:center">Complete a session to start seeing your trend.</div>'
+        } else {
+          const max = Math.max(1, ...recent.map(x => Number(x.reps) || 0));
+          recent.forEach((item, i) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'barwrap';
+            const value = document.createElement('div');
+            value.className = 'barvalue';
+            value.textContent = item.reps;
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.style.height = Math.max(3, ((Number(item.reps) || 0) / max) * 72) + 'px';
+            bar.title = `${item.reps} reps · ${humanDate(item.date)}`;
+            const label = document.createElement('div');
+            label.className = 'barlabel';
+            label.textContent = String(i + 1);
+            wrap.append(value, bar, label);
+            chart.append(wrap)
+          })
+        }
+        const list = $('historyList');
+        list.innerHTML = '';
+        if (!items.length) {
+          list.innerHTML = '<div class="empty">No saved sessions yet. Your completed and reset partial sessions will appear here.</div>';
+          return
+        }
+        items.slice().reverse().slice(0, 20).forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'history-item';
+          const left = document.createElement('div');
+          const date = document.createElement('div');
+          date.className = 'history-date';
+          date.textContent = humanDate(item.date);
+          const detail = document.createElement('div');
+          detail.className = 'history-detail';
+          detail.textContent = `${item.fastSeconds}s fast / ${item.slowSeconds}s recovery · ${durationLabel(item.elapsedSeconds)}`;
+          left.append(date, detail);
+          if (!item.completed) {
+            const pill = document.createElement('span');
+            pill.className = 'pill partial';
+            pill.textContent = 'PARTIAL';
+            date.append(pill)
+          }
+          const right = document.createElement('div');
+          const rep = document.createElement('div');
+          rep.className = 'history-reps';
+          rep.textContent = item.reps;
+          const caption = document.createElement('div');
+          caption.className = 'history-detail';
+          caption.textContent = 'reps';
+          right.append(rep, caption);
+          row.append(left, right);
+          list.append(row)
+        })
+      }
+      $('start').addEventListener('click', () => running ? pause() : start());
+      $('reset').addEventListener('click', () => reset(true));
+      $('testAlarm').addEventListener('click', () => {
+        getAudio();
+        alarm('finish')
+      });
+      $('clearHistory').addEventListener('click', () => {
+        if (confirm('Permanently clear all saved interval-running history from this browser? This cannot be undone.')) {
+          localStorage.removeItem(HISTORY_KEY);
+          renderHistory()
+        }
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && running) keepAwake()
+      });
+      window.addEventListener('pagehide', () => {
+        if (running) {
+          elapsedBeforeStart += Math.max(0, performance.now() - last);
+          running = false
+        }
+        releaseWake();
+        if (reps || elapsedBeforeStart >= 60000) saveSession(false)
+      });
+      ['fast', 'slow', 'target'].forEach(id => $(id).addEventListener('change', () => {
+        if (!running && !reps && !elapsedBeforeStart) {
+          readSettings();
+          remaining = fastS * 1000;
+          render()
+        }
+      }));
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+      readSettings();
+      remaining = fastS * 1000;
+      render();
+      renderHistory();
+    </script>
+  </body>
+</html>
